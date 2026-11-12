@@ -1,0 +1,222 @@
+:root {
+    color-scheme: light;
+    --brand-ink: #152923;
+    --brand-primary: #087f5b;
+    --brand-accent: #c9f06a;
+    --page-background: #f4f7f5;
+    --surface-border: #e4ebe7;
+    --soft-shadow: 0 12px 32px rgb(21 41 35 / 7%);
+}
+
+[x-cloak] {
+    display: none !important;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    background: var(--page-background);
+    color: #3d5149;
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.login-shell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+        radial-gradient(ellipse at 12% 10%, rgb(201 240 106 / 24%), transparent 30rem),
+        linear-gradient(145deg, #f4f7f5, #eaf1ed);
+}
+
+.login-card {
+    border: 1px solid rgb(21 41 35 / 7%);
+    box-shadow: 0 24px 70px rgb(21 41 35 / 12%);
+}
+
+.login-intro {
+    background:
+        radial-gradient(circle at 85% 20%, rgb(201 240 106 / 18%), transparent 13rem),
+        linear-gradient(145deg, #152923, #087f5b);
+}
+
+button,
+input,
+select {
+    font: inherit;
+}
+
+button {
+    transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible {
+    outline: 3px solid rgb(8 127 91 / 28%);
+    outline-offset: 2px;
+}
+
+.bg-jak-navy {
+    background-color: var(--brand-ink) !important;
+}
+
+.text-jak-navy {
+    color: var(--brand-ink) !important;
+}
+
+.bg-jak-blue {
+    background-color: var(--brand-primary) !important;
+}
+
+.text-jak-blue {
+    color: var(--brand-primary) !important;
+}
+
+.border-jak-blue {
+    border-color: var(--brand-primary) !important;
+}
+
+.bg-jak-accent {
+    background-color: var(--brand-accent) !important;
+}
+
+.text-jak-accent {
+    color: var(--brand-accent) !important;
+}
+
+.bg-jak-light {
+    background-color: var(--page-background) !important;
+}
+
+.text-jak-charcoal {
+    color: #3d5149 !important;
+}
+
+header {
+    box-shadow: 0 4px 18px rgb(21 41 35 / 4%);
+}
+
+header .max-w-7xl {
+    max-width: 1360px;
+}
+
+main > div {
+    animation: page-enter 240ms ease both;
+}
+
+main .max-w-7xl {
+    max-width: 1280px;
+}
+
+main .max-w-5xl {
+    max-width: 1050px;
+}
+
+main .max-w-3xl {
+    max-width: 768px;
+}
+
+main .rounded-3xl {
+    border-radius: 28px;
+}
+
+main .rounded-2xl,
+main .rounded-xl {
+    border-radius: 16px;
+}
+
+main .bg-white {
+    box-shadow: 0 2px 12px rgb(21 41 35 / 3%);
+}
+
+main .bg-white:hover {
+    border-color: #d3e2da;
+}
+
+main button.bg-jak-blue:hover,
+main button.bg-jak-accent:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgb(8 127 91 / 16%);
+}
+
+main .aspect-square img {
+    transition: transform 220ms ease;
+}
+
+main .aspect-square:hover img {
+    transform: scale(1.035);
+}
+
+main input,
+main select {
+    min-height: 42px;
+}
+
+main .bg-slate-50 {
+    background-color: #f7faf8;
+}
+
+main .border-slate-200 {
+    border-color: var(--surface-border);
+}
+
+main .shadow-lg,
+main .shadow-2xl {
+    box-shadow: var(--soft-shadow);
+}
+
+.fixed.inset-0.z-50 > .bg-white {
+    max-height: 92vh;
+    overflow-y: auto;
+}
+
+@keyframes page-enter {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 640px) {
+    .login-shell {
+        align-items: flex-start;
+        padding-top: 1.25rem;
+    }
+
+    .login-intro {
+        min-height: 250px;
+    }
+
+    header .h-16 {
+        height: 60px;
+    }
+
+    main .rounded-3xl {
+        border-radius: 20px;
+    }
+
+    main .p-6,
+    main .sm\:p-8 {
+        padding: 1.15rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JakMart — Belanja mudah bersama Muhammad Reza</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-jak-light text-jak-charcoal font-sans antialiased pb-24 md:pb-12 selection:bg-jak-accent selection:text-jak-navy" x-data="jakMartApp()">
+
+    <!-- TOAST NOTIFICATION -->
+    <div x-show="toast.show" x-cloak x-transition class="fixed top-5 right-5 z-50 bg-jak-navy text-white px-4 py-3 rounded-xl shadow-xl text-xs font-semibold flex items-center gap-2 border border-slate-700">
+        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+        <span x-text="toast.message"></span>
+    </div>
+
+    <!-- ANNOUNCEMENT BAR -->
+    <div x-show="currentUser" class="bg-jak-navy text-slate-300 text-xs py-2 px-4 text-center font-medium">
+        <span>🚚 Gratis Ongkir Jabodetabek minimal belanja Rp 100.000 | Layanan B2B Warung &amp; Retailer Aktif</span>
+    </div>
+
+    <!-- MAIN HEADER -->
+    <header x-show="currentUser" class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200 shadow-2xs">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16 sm:h-20 gap-4">
+                <!-- LOGO -->
+                <a @click="navigate('home')" class="flex items-center gap-2.5 cursor-pointer shrink-0">
+                    <div class="w-10 h-10 rounded-xl bg-jak-blue flex items-center justify-center text-white font-extrabold text-lg shadow-xs">
+                        JM
+                    </div>
+                    <div>
+                        <span class="text-xl sm:text-2xl font-extrabold tracking-tight text-jak-navy block leading-none">JakMart</span>
+                        <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 hidden sm:block">Hypermarket &amp; B2B</span>
+                    </div>
+                </a>
+
+                <!-- SEARCH BAR -->
+                <div class="hidden md:flex flex-1 max-w-xl">
+                    <div class="relative w-full">
+                        <input type="text" x-model="filters.search" @input="navigate('catalog')"
+                               placeholder="Cari sembako, minyak, elektronik, atau kebutuhan harian..."
+                               class="w-full pl-4 pr-10 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs focus:outline-none focus:border-jak-blue focus:bg-white transition">
+                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
+                    </div>
+                </div>
+
+                <!-- ACTIONS -->
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <button @click="navigate('catalog')" class="hidden lg:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 text-jak-navy text-xs font-semibold hover:bg-slate-200 transition">
+                        Katalog Lengkap
+                    </button>
+
+                    <!-- Cart Drawer Trigger -->
+                    <button @click="cartDrawerOpen = true" class="relative p-2.5 rounded-xl text-jak-charcoal hover:bg-slate-100 transition">
+                        <span class="text-lg">🛒</span>
+                        <span x-show="cart.length > 0" x-text="cartTotalQty" class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-jak-accent text-jak-navy text-[10px] font-extrabold flex items-center justify-center shadow-xs"></span>
+                    </button>
+
+                    <template x-if="currentUser && currentUser.role === 'customer'">
+                        <button @click="openAdminLogin()" class="px-4 py-2 rounded-xl bg-jak-blue text-white text-xs font-semibold hover:bg-blue-700 transition">
+                            Login Admin
+                        </button>
+                    </template>
+                    <template x-if="currentUser && currentUser.role === 'admin'">
+                        <button @click="adminModal = true" class="px-4 py-2 rounded-xl bg-amber-100 text-amber-800 text-xs font-semibold hover:bg-amber-200 transition">
+                            Panel Admin
+                        </button>
+                    </template>
+                    <template x-if="currentUser">
+                        <div class="flex items-center gap-2">
+                            <span class="px-3 py-1.5 rounded-xl bg-slate-100 text-jak-navy text-xs font-bold border border-slate-200 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full" :class="currentUser.role === 'admin' ? 'bg-amber-500' : 'bg-emerald-500'"></span>
+                                <span x-text="currentUser.name"></span>
+                            </span>
+                            <button @click="logout()" class="p-2 rounded-xl text-slate-400 hover:text-red-500 text-xs" title="Logout">🚪</button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Mobile Search -->
+            <div class="pb-3 md:hidden">
+                <input type="text" x-model="filters.search" @input="navigate('catalog')"
+                       placeholder="Cari produk JakMart..."
+                       class="w-full pl-4 pr-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs focus:outline-none focus:border-jak-blue">
+            </div>
+        </div>
+    </header>
+
+    <!-- USER LOGIN SCREEN -->
+    <section x-show="!currentUser" x-cloak class="login-shell min-h-screen px-4 py-10 sm:px-6">
+        <div class="login-card mx-auto grid w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl md:grid-cols-2">
+            <div class="login-intro flex flex-col justify-between p-8 text-white sm:p-12">
+                <a class="flex items-center gap-3" href="#">
+                    <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 text-lg font-extrabold">JM</span>
+                    <span>
+                        <span class="block text-xl font-extrabold">JakMart</span>
+                        <span class="text-xs text-white/70">Belanja mudah bersama Muhammad Reza</span>
+                    </span>
+                </a>
+                <div class="my-12 space-y-4">
+                    <p class="text-xs font-bold uppercase tracking-[0.2em] text-lime-200">Selamat datang</p>
+                    <h1 class="text-3xl font-extrabold leading-tight sm:text-4xl">Masuk untuk mulai berbelanja.</h1>
+                    <p class="max-w-sm text-sm leading-6 text-white/75">Temukan kebutuhan harian, produk pilihan, dan penawaran grosir dalam satu tempat.</p>
+                </div>
+                <p class="text-xs text-white/60">Akun demo user: <strong class="text-white">user</strong> / <strong class="text-white">user123</strong></p>
+            </div>
+            <div class="p-8 sm:p-12">
+                <div class="mb-7">
+                    <p class="text-xs font-bold uppercase tracking-widest text-jak-blue">Login User</p>
+                    <h2 class="mt-2 text-2xl font-extrabold text-jak-navy">Masuk ke akun</h2>
+                    <p class="mt-2 text-sm text-slate-500">Masukkan username dan password akun user demo.</p>
+                </div>
+                <form @submit.prevent="submitLogin()"
+                      class="space-y-4">
+                    <label class="block space-y-1.5 text-xs font-semibold text-slate-700" for="user-username">
+                        Username
+                        <input id="user-username" x-model="loginForm.username" autocomplete="username" required
+                               class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-normal focus:border-jak-blue focus:bg-white focus:outline-none"
+                               placeholder="Masukkan username">
+                    </label>
+                    <label class="block space-y-1.5 text-xs font-semibold text-slate-700" for="user-password">
+                        Password
+                        <input id="user-password" x-model="loginForm.password" type="password" autocomplete="current-password" required
+                               class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-normal focus:border-jak-blue focus:bg-white focus:outline-none"
+                               placeholder="Masukkan password">
+                    </label>
+                    <button type="submit" class="w-full rounded-xl bg-jak-blue px-4 py-3.5 text-sm font-bold text-white hover:bg-emerald-800">
+                        Login User
+                    </button>
+                </form>
+                <p class="mt-5 text-center text-xs text-slate-400">Login ini hanya untuk demo lokal.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- MAIN APP CONTAINER -->
+    <main x-show="currentUser">
+        <!-- ================= PAGE: HOME ================= -->
+        <div x-show="activePage === 'home'" x-cloak class="space-y-12">
+            <!-- Hero Banner -->
+            <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+                <div class="rounded-3xl bg-jak-navy text-white overflow-hidden shadow-lg grid grid-cols-1 lg:grid-cols-12 items-center">
+                    <div class="p-6 sm:p-12 lg:p-16 lg:col-span-7 space-y-4">
+                        <span class="inline-block px-3 py-1 rounded-full bg-white/10 text-jak-accent text-[11px] font-bold uppercase tracking-wider">
+                            Hypermarket &amp; Wholesale Hub
+                        </span>
+                        <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight">
+                            Belanja Kebutuhan <span class="text-jak-accent">Lengkap &amp; Ekonomis.</span>
+                        </h1>
+                        <p class="text-xs sm:text-sm text-slate-300 max-w-lg leading-relaxed">
+                            Penuhi kebutuhan harian rumah tangga hingga grosir warung dengan jaminan harga terbaik dan pengiriman instan.
+                        </p>
+                        <div class="flex gap-3 pt-2">
+                            <button @click="navigate('catalog')" class="px-6 py-3 rounded-xl bg-jak-accent text-jak-navy font-bold text-xs hover:brightness-105 transition shadow-sm">
+                                Belanja Sekarang
+                            </button>
+                            <button @click="filters.wholesaleOnly = true; navigate('catalog')" class="px-6 py-3 rounded-xl bg-white/10 text-white font-bold text-xs hover:bg-white/20 transition">
+                                Grosir B2B
+                            </button>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-5 h-64 sm:h-80 lg:h-full">
+                        <img src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80"
+                             onerror="this.src='https://placehold.co/800x600/0F172A/FFFFFF?text=JakMart'"
+                             class="w-full h-full object-cover">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Kategori Belanja (Tanpa Icon) -->
+            <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="text-lg sm:text-xl font-bold text-jak-navy mb-6">Kategori Belanja</h2>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <template x-for="cat in categories" :key="cat.name">
+                        <button @click="filterByCategory(cat.name)"
+                                class="p-5 rounded-2xl bg-white border border-slate-200 hover:border-jak-blue hover:shadow-xs transition text-center group flex flex-col justify-center items-center">
+                            <h3 class="font-bold text-xs text-jak-charcoal group-hover:text-jak-blue" x-text="cat.name"></h3>
+                            <p class="text-[10px] text-slate-400 mt-1 line-clamp-1" x-text="cat.subtitle"></p>
+                        </button>
+                    </template>
+                </div>
+            </section>
+
+            <!-- Produk Unggulan -->
+            <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-lg sm:text-xl font-bold text-jak-navy">Produk Terlaris</h2>
+                    <button @click="navigate('catalog')" class="text-xs font-bold text-jak-blue hover:underline">Lihat Semua →</button>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+                    <template x-for="product in products.slice(0, 8)" :key="product.id">
+                        <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-md transition flex flex-col justify-between">
+                            <div>
+                                <div class="aspect-square bg-slate-100 relative overflow-hidden cursor-pointer" @click="openProductDetail(product)">
+                                    <img :src="product.image" :alt="product.name" class="w-full h-full object-cover hover:scale-105 transition">
+                                    <span x-show="product.wholesale" class="absolute top-2 left-2 px-2 py-0.5 bg-jak-navy text-white text-[10px] font-bold rounded-md">Grosir</span>
+                                </div>
+                                <div class="p-3.5">
+                                    <p class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold" x-text="product.category"></p>
+                                    <h3 @click="openProductDetail(product)" class="text-xs sm:text-sm font-bold text-jak-navy mt-1 line-clamp-2 cursor-pointer hover:text-jak-blue" x-text="product.name"></h3>
+                                    <p class="text-sm font-extrabold text-jak-blue mt-2" x-text="formatRupiah(product.retailPrice)"></p>
+                                </div>
+                            </div>
+                            <div class="p-3.5 pt-0">
+                                <button @click="addToCart(product)" class="w-full py-2 rounded-xl bg-jak-blue text-white text-xs font-bold hover:bg-blue-700 transition">
+                                    + Keranjang
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </section>
+        </div>
+
+        <!-- ================= PAGE: CATALOG ================= -->
+        <div x-show="activePage === 'catalog'" x-cloak class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-bold text-jak-navy">Katalog Produk JakMart</h1>
+                    <p class="text-xs text-slate-500 mt-0.5">Menampilkan <span x-text="filteredProducts.length"></span> produk tersedia</p>
+                </div>
+                <button @click="navigate('home')" class="text-xs font-semibold text-jak-blue hover:underline">← Kembali ke Beranda</button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <!-- Filters Sidebar -->
+                <div class="space-y-4">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 space-y-4">
+                        <h2 class="font-bold text-xs text-slate-400 uppercase tracking-wider">Filter Kategori</h2>
+                        <div class="space-y-1.5 text-xs">
+                            <button @click="filters.category = 'All'" class="w-full text-left px-3 py-2 rounded-xl font-medium transition" :class="filters.category === 'All' ? 'bg-jak-blue text-white' : 'hover:bg-slate-50 text-slate-600'">Semua Kategori</button>
+                            <template x-for="cat in categories" :key="cat.name">
+                                <button @click="filters.category = cat.name" class="w-full text-left px-3 py-2 rounded-xl font-medium transition" :class="filters.category === cat.name ? 'bg-jak-blue text-white' : 'hover:bg-slate-50 text-slate-600'" x-text="cat.name"></button>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Product Grid -->
+                <div class="lg:col-span-3">
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <template x-for="product in filteredProducts" :key="product.id">
+                            <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-md transition flex flex-col justify-between">
+                                <div>
+                                    <div class="aspect-square bg-slate-100 relative overflow-hidden cursor-pointer" @click="openProductDetail(product)">
+                                        <img :src="product.image" :alt="product.name" class="w-full h-full object-cover hover:scale-105 transition">
+                                        <span x-show="product.wholesale" class="absolute top-2 left-2 px-2 py-0.5 bg-jak-navy text-white text-[10px] font-bold rounded-md">Grosir B2B</span>
+                                    </div>
+                                    <div class="p-3.5">
+                                        <p class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold" x-text="product.category"></p>
+                                        <h3 @click="openProductDetail(product)" class="text-xs sm:text-sm font-bold text-jak-navy mt-1 line-clamp-2 cursor-pointer hover:text-jak-blue" x-text="product.name"></h3>
+                                        <p class="text-sm font-extrabold text-jak-blue mt-2" x-text="formatRupiah(product.retailPrice)"></p>
+                                        <p class="text-[10px] text-slate-500 mt-1">Stok: <span x-text="product.stock"></span> unit</p>
+                                    </div>
+                                </div>
+                                <div class="p-3.5 pt-0">
+                                    <button @click="addToCart(product)" class="w-full py-2 rounded-xl bg-jak-blue text-white text-xs font-bold hover:bg-blue-700 transition">
+                                        + Keranjang
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= PAGE: PRODUCT DETAIL ================= -->
+        <div x-show="activePage === 'detail'" x-cloak class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16">
+            <template x-if="selectedProduct">
+                <div>
+                    <button @click="navigate('catalog')" class="text-xs font-semibold text-jak-blue mb-4 inline-flex items-center gap-1 hover:underline">← Kembali ke Katalog</button>
+                    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden grid grid-cols-1 md:grid-cols-12 gap-6 p-6 sm:p-8">
+                        <div class="md:col-span-5 aspect-square rounded-xl bg-slate-100 overflow-hidden">
+                            <img :src="selectedProduct.image" :alt="selectedProduct.name" class="w-full h-full object-cover">
+                        </div>
+                        <div class="md:col-span-7 space-y-4">
+                            <div>
+                                <span class="px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 text-[10px] font-bold uppercase tracking-wider" x-text="selectedProduct.category"></span>
+                                <h1 class="text-xl sm:text-2xl font-bold text-jak-navy mt-2" x-text="selectedProduct.name"></h1>
+                                <p class="text-2xl font-extrabold text-jak-blue mt-2" x-text="formatRupiah(detailMode === 'b2b' && selectedProduct.wholesale ? selectedProduct.wholesalePrice : selectedProduct.retailPrice)"></p>
+                            </div>
+
+                            <p class="text-xs text-slate-600 leading-relaxed" x-text="selectedProduct.description"></p>
+
+                            <!-- B2B Wholesale Tiers info -->
+                            <div x-show="selectedProduct.wholesale" class="p-4 bg-amber-50 rounded-xl border border-amber-200 space-y-2">
+                                <p class="text-xs font-bold text-amber-900">Program Grosir B2B (MOQ: <span x-text="selectedProduct.moq"></span> unit)</p>
+                                <p class="text-[11px] text-amber-800">Harga Grosir: <span class="font-bold" x-text="formatRupiah(selectedProduct.wholesalePrice)"></span> per unit</p>
+                            </div>
+
+                            <!-- Mode Selector -->
+                            <div class="flex gap-2 pt-2">
+                                <button @click="detailMode = 'b2c'" class="flex-1 py-2 rounded-xl text-xs font-bold border transition" :class="detailMode === 'b2c' ? 'bg-jak-blue text-white border-jak-blue' : 'bg-slate-50 text-slate-600 border-slate-200'">Eceran (B2C)</button>
+                                <button x-show="selectedProduct.wholesale" @click="detailMode = 'b2b'" class="flex-1 py-2 rounded-xl text-xs font-bold border transition" :class="detailMode === 'b2b' ? 'bg-jak-blue text-white border-jak-blue' : 'bg-slate-50 text-slate-600 border-slate-200'">Grosir (B2B)</button>
+                            </div>
+
+                            <!-- Quantity & Add -->
+                            <div class="flex items-center gap-4 pt-2">
+                                <div class="flex items-center border border-slate-200 rounded-xl overflow-hidden">
+                                    <button @click="if(detailQty > (detailMode === 'b2b' ? selectedProduct.moq : 1)) detailQty--" class="px-3.5 py-2 bg-slate-50 hover:bg-slate-100 text-xs font-bold">-</button>
+                                    <span class="px-4 text-xs font-bold" x-text="detailQty"></span>
+                                    <button @click="detailQty++" class="px-3.5 py-2 bg-slate-50 hover:bg-slate-100 text-xs font-bold">+</button>
+                                </div>
+                                <button @click="addToCartFromDetail()" class="flex-1 py-3 rounded-xl bg-jak-blue text-white text-xs font-bold hover:bg-blue-700 transition">
+                                    Masukkan ke Keranjang
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- ================= PAGE: CHECKOUT ================= -->
+        <div x-show="activePage === 'checkout'" x-cloak class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16">
+            <button @click="navigate('home')" class="text-xs font-semibold text-jak-blue mb-4 inline-flex items-center gap-1 hover:underline">← Kembali Berbelanja</button>
+            <h1 class="text-xl sm:text-2xl font-bold text-jak-navy mb-6">Checkout &amp; Pembayaran JakMart</h1>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+                <div class="md:col-span-7 space-y-6">
+                    <!-- Alamat -->
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 space-y-3 shadow-2xs">
+                        <h2 class="font-bold text-xs text-slate-400 uppercase tracking-wider">Alamat Pengiriman Utama</h2>
+                        <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
+                            <p class="font-bold text-jak-navy" x-text="currentUser ? currentUser.name + ' (' + currentUser.email + ')' : ''"></p>
+                            <p class="text-slate-600">Jl. Jend. Sudirman Kav. 52-53, Senayan, Kebayoran Baru, Jakarta Selatan</p>
+                        </div>
+                    </div>
+
+                    <!-- Metode Pembayaran -->
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 space-y-4 shadow-2xs">
+                        <h2 class="font-bold text-xs text-slate-400 uppercase tracking-wider">Pilih Metode Pembayaran</h2>
+                        <div class="space-y-2.5">
+                            <label class="flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition"
+                                   :class="paymentMethod === 'qris' ? 'border-jak-blue bg-jak-blue/5' : 'border-slate-200 hover:bg-slate-50'">
+                                <div class="flex items-center gap-3">
+                                    <input type="radio" name="payment" value="qris" x-model="paymentMethod" class="text-jak-blue">
+                                    <div>
+                                        <p class="text-xs font-bold text-jak-navy">QRIS (GoPay, OVO, DANA, BCA, ShopeePay)</p>
+                                        <p class="text-[10px] text-slate-500">QR simulasi; tidak terhubung ke bank atau e-wallet</p>
+                                    </div>
+                                </div>
+                                <span class="px-2 py-1 bg-jak-accent/10 text-jak-accent text-[10px] font-bold rounded-md">Instan</span>
+                            </label>
+
+                            <label class="flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition"
+                                   :class="paymentMethod === 'va' ? 'border-jak-blue bg-jak-blue/5' : 'border-slate-200 hover:bg-slate-50'">
+                                <div class="flex items-center gap-3">
+                                    <input type="radio" name="payment" value="va" x-model="paymentMethod" class="text-jak-blue">
+                                    <div>
+                                        <p class="text-xs font-bold text-jak-navy">Virtual Account</p>
+                                        <p class="text-[10px] text-slate-500">Nomor unik untuk simulasi pembayaran</p>
+                                    </div>
+                                </div>
+                                <span class="text-xs font-bold text-slate-700">3 bank</span>
+                            </label>
+
+                            <label class="flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition"
+                                   :class="paymentMethod === 'transfer' ? 'border-jak-blue bg-jak-blue/5' : 'border-slate-200 hover:bg-slate-50'">
+                                <div class="flex items-center gap-3">
+                                    <input type="radio" name="payment" value="transfer" x-model="paymentMethod" class="text-jak-blue">
+                                    <div>
+                                        <p class="text-xs font-bold text-jak-navy">Transfer bank</p>
+                                        <p class="text-[10px] text-slate-500">Rekening demo atas nama Muhammad Reza</p>
+                                    </div>
+                                </div>
+                                <span class="text-xs font-bold text-slate-700">3 bank</span>
+                            </label>
+                        </div>
+                        <div x-show="paymentMethod !== 'qris'" class="space-y-2">
+                            <label for="payment-bank" class="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Pilih bank</label>
+                            <select id="payment-bank" x-model="paymentBank" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-jak-navy focus:border-jak-blue focus:outline-none">
+                                <option value="bca">BCA</option>
+                                <option value="bri">BRI</option>
+                                <option value="bni">BNI</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="md:col-span-5 space-y-4">
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 space-y-4 shadow-2xs">
+                        <h2 class="font-bold text-xs text-slate-400 uppercase tracking-wider">Ringkasan Belanja</h2>
+                        <div class="space-y-2 text-xs divide-y divide-slate-100">
+                            <template x-for="item in cart" :key="item.product.id">
+                                <div class="flex justify-between pt-2">
+                                    <span class="text-slate-600 truncate max-w-[180px]" x-text="item.product.name + ' (' + item.qty + 'x)'"></span>
+                                    <span class="font-bold text-jak-navy" x-text="formatRupiah(item.price * item.qty)"></span>
+                                </div>
+                            </template>
+                        </div>
+                        <div class="pt-3 border-t border-slate-200 space-y-1.5 text-xs">
+                            <div class="flex justify-between text-slate-500">
+                                <span>Subtotal Produk</span>
+                                <span x-text="formatRupiah(cartSubtotal)"></span>
+                            </div>
+                            <div class="flex justify-between text-slate-500">
+                                <span>Estimasi Ongkir (Instant)</span>
+                                <span>Rp 15.000</span>
+                            </div>
+                            <div class="flex justify-between font-bold text-sm pt-2 border-t border-slate-100">
+                                <span class="text-jak-navy">Total Tagihan</span>
+                                <span class="text-jak-blue font-extrabold text-base" x-text="formatRupiah(cartSubtotal + 15000)"></span>
+                            </div>
+                        </div>
+
+                        <button @click="submitCheckout()" class="w-full py-3.5 rounded-xl bg-jak-accent text-jak-navy font-bold text-xs uppercase tracking-wider hover:brightness-105 transition shadow-sm">
+                            Bayar Sekarang (<span x-text="formatRupiah(cartSubtotal + 15000)"></span>)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ADMIN LOGIN MODAL -->
+    <div x-show="loginModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-2xl border border-slate-100">
+            <div class="flex justify-between items-center pb-2 border-b border-slate-100">
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-widest text-jak-blue">Akses Pengelola</p>
+                    <h3 class="mt-1 text-sm font-bold text-jak-navy">Login Admin</h3>
+                </div>
+                <button type="button" @click="loginModal = false" class="text-slate-400 font-bold">✕</button>
+            </div>
+            <p class="text-xs text-slate-500">Masuk dengan kredensial admin demo untuk membuka panel pengelolaan.</p>
+            <p class="rounded-xl bg-amber-50 px-3 py-2 text-[11px] text-amber-800">Username: <strong>admin</strong> &nbsp; Password: <strong>admin123</strong></p>
+            <form @submit.prevent="submitLogin()" class="space-y-3">
+                <label for="admin-username" class="block space-y-1.5 text-xs font-semibold text-slate-700">
+                    Username
+                    <input id="admin-username" x-model="loginForm.username" autocomplete="username" required
+                           class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-normal focus:border-jak-blue focus:outline-none"
+                           placeholder="Username admin">
+                </label>
+                <label for="admin-password" class="block space-y-1.5 text-xs font-semibold text-slate-700">
+                    Password
+                    <input id="admin-password" x-model="loginForm.password" type="password" autocomplete="current-password" required
+                           class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-normal focus:border-jak-blue focus:outline-none"
+                           placeholder="Password admin">
+                </label>
+                <button type="submit" class="w-full rounded-xl bg-jak-blue px-4 py-3 text-xs font-bold text-white hover:bg-emerald-800">
+                    Login Admin
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- SLIDE-OVER CART DRAWER -->
+    <div x-show="cartDrawerOpen" x-cloak class="fixed inset-0 z-50 overflow-hidden">
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-xs transition-opacity" @click="cartDrawerOpen = false"></div>
+        <div class="absolute inset-y-0 right-0 max-w-full flex pl-10">
+            <div class="w-screen max-w-md bg-white shadow-xl flex flex-col">
+                <div class="flex items-center justify-between p-6 border-b border-slate-200">
+                    <h2 class="text-base font-bold text-jak-navy">Keranjang Belanja JakMart</h2>
+                    <button @click="cartDrawerOpen = false" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+                </div>
+                <div class="flex-1 overflow-y-auto p-6 space-y-4">
+                    <template x-for="item in cart" :key="item.product.id">
+                        <div class="flex gap-4 p-3 rounded-xl bg-slate-50 border border-slate-100 items-center">
+                            <img :src="item.product.image" :alt="item.product.name" class="w-16 h-16 rounded-lg object-cover bg-white">
+                            <div class="flex-1 min-w-0">
+                                <h4 class="text-xs font-bold text-jak-navy truncate" x-text="item.product.name"></h4>
+                                <p class="text-xs font-semibold text-jak-blue mt-0.5" x-text="formatRupiah(item.price)"></p>
+                                <div class="flex items-center gap-2 mt-2">
+                                    <button @click="updateCartQty(item.product.id, item.qty - 1)" class="w-6 h-6 rounded bg-white border border-slate-200 text-xs font-bold">-</button>
+                                    <span class="text-xs font-bold" x-text="item.qty"></span>
+                                    <button @click="updateCartQty(item.product.id, item.qty + 1)" class="w-6 h-6 rounded bg-white border border-slate-200 text-xs font-bold">+</button>
+                                </div>
+                            </div>
+                            <button @click="removeFromCart(item.product.id)" class="text-slate-400 hover:text-red-500 text-xs">🗑</button>
+                        </div>
+                    </template>
+                    <div x-show="cart.length === 0" class="text-center py-12 text-slate-400 text-xs">
+                        Keranjang belanja Anda masih kosong.
+                    </div>
+                </div>
+                <div class="p-6 border-t border-slate-200 space-y-3 bg-slate-50">
+                    <div class="flex justify-between text-xs font-bold text-jak-navy">
+                        <span>Subtotal:</span>
+                        <span x-text="formatRupiah(cartSubtotal)"></span>
+                    </div>
+                    <button @click="proceedToCheckout()" :disabled="cart.length === 0" class="w-full py-3.5 rounded-xl bg-jak-blue text-white text-xs font-bold hover:bg-blue-700 disabled:opacity-50 transition shadow-xs">
+                        Lanjut ke Checkout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAYMENT SUCCESS / QRIS SIMULATION MODAL -->
+    <div x-show="paymentModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-sm text-center space-y-4 shadow-2xl border border-slate-100">
+            <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto text-xl font-bold">✓</div>
+            <h3 class="text-base font-bold text-jak-navy">Simulasi Pembayaran JakMart</h3>
+            <p class="text-xs text-slate-500">Metode: <span class="font-bold text-jak-blue" x-text="paymentMethodLabel"></span></p>
+
+            <div x-show="paymentMethod === 'qris'" class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <img :src="qrisImageUrl" alt="Barcode QRIS demo" class="w-40 h-40 mx-auto rounded-lg">
+                <p class="text-[10px] text-slate-400 mt-2">QR demo, bukan kode pembayaran aktif. Jangan gunakan untuk transfer sungguhan.</p>
+            </div>
+
+            <div x-show="paymentMethod === 'va'" class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                <p class="text-[10px] text-slate-400 uppercase font-semibold" x-text="'Virtual Account ' + selectedBankName"></p>
+                <p class="text-base font-mono font-bold text-jak-navy mt-1" x-text="virtualAccountNumber"></p>
+                <p class="text-[10px] text-slate-500 mt-2">Nomor VA unik khusus demo; pembayaran tidak diproses.</p>
+            </div>
+
+            <div x-show="paymentMethod === 'transfer'" class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                <p class="text-[10px] text-slate-400 uppercase font-semibold" x-text="'Rekening demo ' + selectedBankName"></p>
+                <p class="text-base font-mono font-bold text-jak-navy mt-1" x-text="bankAccounts[paymentBank].number"></p>
+                <p class="text-xs font-semibold text-slate-700 mt-2">a.n. Muhammad Reza</p>
+                <p class="text-[10px] text-slate-500 mt-1">Rekening contoh, bukan untuk transfer sungguhan.</p>
+            </div>
+
+            <button @click="finishPaymentSimulation()" class="w-full py-3 rounded-xl bg-jak-blue text-white font-bold text-xs hover:bg-jak-navy transition">
+                Tutup Simulasi
+            </button>
+        </div>
+    </div>
+
+    <!-- ADMIN PANEL (Manajemen Stok & Gambar) -->
+    <div x-show="adminModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-3xl space-y-4 shadow-2xl border border-slate-100 max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+                <h3 class="text-base font-bold text-jak-navy">Admin Control Panel — Manajemen Stok &amp; Gambar</h3>
+                <button @click="adminModal = false" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto space-y-4">
+                <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                    <h4 class="text-xs font-bold text-jak-navy uppercase tracking-wider">Tambah / Update Produk</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <input type="text" x-model="adminForm.name" placeholder="Nama Produk" class="p-2.5 rounded-xl border border-slate-200 bg-white">
+                        <input type="number" x-model="adminForm.retailPrice" placeholder="Harga Retail (Rp)" class="p-2.5 rounded-xl border border-slate-200 bg-white">
+                        <input type="number" x-model="adminForm.stock" placeholder="Jumlah Stok" class="p-2.5 rounded-xl border border-slate-200 bg-white">
+                        <label class="flex flex-col gap-1.5 rounded-xl border border-dashed border-slate-300 bg-white p-3 text-xs font-semibold text-slate-600">
+                            Upload gambar produk
+                            <input id="admin-image-file" x-ref="adminImageFile" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" @change="handleImageUpload($event)" class="w-full text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:px-3 file:py-2 file:font-semibold file:text-emerald-800">
+                            <span class="text-[10px] font-normal text-slate-400">JPG, PNG, atau WEBP · maksimal 5 MB</span>
+                        </label>
+                    </div>
+                    <div x-show="adminForm.image" class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3">
+                        <img :src="adminForm.image" :alt="adminForm.name || 'Preview gambar produk'" class="h-16 w-16 rounded-lg bg-slate-100 object-cover">
+                        <div class="min-w-0 flex-1">
+                            <p class="text-xs font-bold text-jak-navy" x-text="adminForm.name || 'Preview gambar produk'"></p>
+                            <p class="text-[10px] text-slate-500">Gambar ini akan dipakai untuk produk tersebut.</p>
+                        </div>
+                        <button type="button" @click="clearAdminImage()" class="rounded-lg px-2 py-1 text-[10px] font-bold text-red-600 hover:bg-red-50">Hapus gambar</button>
+                    </div>
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button @click="saveAdminProduct()" class="px-4 py-2 rounded-xl bg-jak-blue text-white font-bold text-xs">Simpan Produk</button>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Daftar Produk Aktif</h4>
+                    <div class="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white">
+                        <template x-for="product in products" :key="product.id">
+                            <div class="flex items-center justify-between p-3 text-xs">
+                                <div class="flex items-center gap-3">
+                                    <img :src="product.image" :alt="product.name" class="w-10 h-10 rounded-lg object-cover bg-slate-100">
+                                    <div>
+                                        <p class="font-bold text-jak-navy" x-text="product.name"></p>
+                                        <p class="text-[10px] text-slate-500" x-text="formatRupiah(product.retailPrice) + ' • Stok: ' + product.stock"></p>
+                                    </div>
+                                </div>
+                                <button @click="editProduct(product)" class="px-3 py-1.5 rounded-lg bg-slate-100 font-bold text-slate-700 hover:bg-slate-200">Edit</button>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
